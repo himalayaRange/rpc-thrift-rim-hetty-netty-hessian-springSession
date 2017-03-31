@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd 
+       http://www.springframework.org/schema/util
+       http://www.springframework.org/schema/util/spring-util.xsd">
+       
+	
+	   <context:annotation-config/>
+	   <!-- 引入配置文件 -->
+	   <context:property-placeholder location="classpath:hrpc/hrpc.properties"/>
+		
+	   <!-- 客户端配置 -->
+	   <bean id="rpcClient" class="com.github.wangyi.hrpc.hrpc_core.client.RPCClient">
+			 <constructor-arg name="zookeeper" value="${zookeeper.address}"/>
+			 <!-- 订阅需要使用的接口 -->
+			 <constructor-arg name="interfaces">
+			 	<list>
+		 		    <value>com.github.wangyi.hrpc.hrpc_api.service.OrderService</value>
+	                <value>com.github.wangyi.hrpc.hrpc_api.service.UserService</value>
+	                <value>com.github.wangyi.hrpc.hrpc_api.service.GoodsService</value>
+	                <value>com.github.wangyi.hrpc.hrpc_api.service.JDService</value>
+			 	</list>
+			 </constructor-arg>
+		</bean>
+</beans>
+       

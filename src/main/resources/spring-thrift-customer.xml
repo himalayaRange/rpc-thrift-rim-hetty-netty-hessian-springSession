@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+				http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+				http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+				http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd"
+	default-lazy-init="false">
+	
+	<!-- zookeeper -->
+	<bean id="zookeeper" class="com.github.wangyi.thrift.rpc.zookeeper.support.ZookepperFactory">
+		<property name="zkHosts" value="${zk_zkHosts}" />
+		<property name="namespace" value="${zk_namespace}" />
+		<property name="connectionTimeout" value="${zk_connectionTimeout}" />
+		<property name="sessionTimeout" value="${zk_sessionTimeout}" />
+		<property name="maxRetryPoliy" value="${zk_maxRetryPoliy}"/>
+		<property name="singleton" value="true" />
+	</bean>
+	
+	<!-- 对Zookepper服务进行操作 -->
+	<bean id="addressExtend" class="com.github.wangyi.thrift.rpc.zookeeper.support.AddressExtendResolve">
+		<property name="zkClient" ref="zookeeper" />
+	</bean>
+	
+	<!-- addressProvider -->
+	<bean id="addressProvider" class="com.github.wangyi.thrift.rpc.zookeeper.support.ZookeeperAddressProvider">
+     	<property name="service" value="com.github.wangyi.thrift.rpc.service.HelloWorldService"/>
+     	<property name="version" value="1.0.0" />
+     	<property name="zkClient" ref="zookeeper" />
+    </bean>
+	
+	<!-- client Proxy -->
+    <bean id="helloSerivce" class="com.github.wangyi.thrift.rpc.thrift.ThriftServiceClientProxyFactory" destroy-method="close">
+       	<!-- 传输格式，默认位1，二进制格式，2： 压缩格式 3：JSON格式 4：提供JSON只写协议，生成的文件很容易通过脚本语言解析 -->
+        <property name="protocal" value="1"/>
+        <property name="maxActive" value="20"/>
+        <property name="maxIdle" value="1"/>
+        <property name="minIdle" value="0"/>
+        <property name="idleTime" value="1800000" />
+        <property name="maxWaitMillis" value="-1"/>
+        <property name="serverAddressProvider" ref="addressProvider"/>
+    </bean>
+	
+</beans>

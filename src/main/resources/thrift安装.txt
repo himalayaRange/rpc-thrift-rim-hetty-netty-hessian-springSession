@@ -1,0 +1,235 @@
+Thrift基本概念
+
+1.数据类型
+基本类型：
+bool：布尔值，true 或 false，对应 Java 的 boolean
+byte：8 位有符号整数，对应 Java 的 byte
+i16：16 位有符号整数，对应 Java 的 short
+i32：32 位有符号整数，对应 Java 的 int
+i64：64 位有符号整数，对应 Java 的 long
+double：64 位浮点数，对应 Java 的 double
+string：utf-8编码的字符串，对应 Java 的 String
+结构体类型：
+struct：定义公共的对象，类似于 C 语言中的结构体定义，在 Java 中是一个 JavaBean
+容器类型：
+list：对应 Java 的 ArrayList
+set：对应 Java 的 HashSet
+map：对应 Java 的 HashMap
+异常类型：
+exception：对应 Java 的 Exception
+服务类型：
+service：对应服务的类
+2.服务端编码基本步骤：
+
+实现服务处理接口impl
+创建TProcessor（处理器）
+创建TServerTransport（服务通道）
+创建TProtocol（传输协议）
+创建TServer（服务）
+启动Server
+3.客户端编码基本步骤：
+
+创建Transport
+创建TProtocol
+基于TTransport和TProtocol创建 Client
+调用Client的相应方法
+4.数据传输协议
+
+TBinaryProtocol : 二进制格式.
+TCompactProtocol : 压缩格式
+TJSONProtocol : JSON格式
+TSimpleJSONProtocol : 提供JSON只写协议, 生成的文件很容易通过脚本语言解析
+tips:客户端和服务端的协议要一致
+
+ 
+ 
+五.Java实例
+
+1.引入jar包
+我这里用到的是maven进行管理jar包的,所以首先新建一个maven项目,然后在 pom.xml中添加如下内容:
+ 
+<dependency>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+            <version>0.9.1</version>
+  </dependency>
+  <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.5.8</version>
+ </dependency>
+
+
+2.创建Thrift文件
+ 
+创建Thrift文件：amosli@amosli-pc:/media/f91a4cca-0b96-4c30-b140-7918a196de3e/amosli/java/rpc/DemoTest/demoHello.thrift ,内容如下：
+
+namespace java com.amos.thrift.demo
+
+service  HelloWorldService {
+  string sayHello(1:string username)
+}
+3.生成java文件:
+
+thrift -r -gen java demoHello.thrift
+文件目录如下:
+
+
+$ tree 
+.
+├── demoHello.thrift
+└── gen-java
+    └── com
+        └── amos
+            └── thrift
+                └── demo
+                    └── HelloWorldService.java
+
+
+把生成的HelloWorldService.java文件拷贝到项目中去.
+
+4.实现接口Iface
+
+package com.amos;
+ 
+/**
+ * Created by amosli on 14-8-12.
+ */
+public class HelloWorldImpl implements HelloWorldService.Iface {
+ 
+    public HelloWorldImpl() {
+    }
+ 
+    @Override
+    public String sayHello(String username) {
+        return "Hi," + username + " ,Welcome to the thrift's world !";
+    }
+ 
+}
+
+
+5.TSimpleServer服务端
+
+简单的单线程服务模型，一般用于测试。
+
+编写服务端server代码：HelloServerDemo.java
+
+
+package com.amos;
+ 
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.server.TServer;
+import org.apache.thrift.server.TSimpleServer;
+import org.apache.thrift.transport.TServerSocket;
+ 
+ 
+/**
+ * Created by amosli on 14-8-12.
+ */
+public class HelloServerDemo {
+    public static final int SERVER_PORT = 8090;
+ 
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        HelloServerDemo server = new HelloServerDemo();
+        server.startServer();
+    }
+ 
+    public void startServer() {
+        try {
+            System.out.println("HelloWorld TSimpleServer start ....");
+ 
+//          TProcessor tprocessor = new HelloWorldService.Processor<HelloWorldService.Iface>(new  HelloWorldImpl());
+            HelloWorldService.Processor<HelloWorldService.Iface> tprocessor = new HelloWorldService.Processor<HelloWorldService.Iface>(new HelloWorldImpl());
+ 
+            // 简单的单线程服务模型，一般用于测试
+            TServerSocket serverTransport = new TServerSocket(SERVER_PORT);
+            TServer.Args tArgs = new TServer.Args(serverTransport);
+            tArgs.processor(tprocessor);
+//            tArgs.protocolFactory(new TBinaryProtocol.Factory());
+            tArgs.protocolFactory(new TCompactProtocol.Factory());
+            // tArgs.protocolFactory(new TJSONProtocol.Factory());
+            TServer server = new TSimpleServer(tArgs);
+            server.server();
+ 
+        } catch (Exception e) {
+            System.out.println("Server start error!!!");
+            e.printStackTrace();
+        }
+    }
+ 
+}
+
+
+6.编写客户端代码
+
+
+package com.amos;
+ 
+ 
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TTransportException;
+ 
+/**
+ * Created by amosli on 14-8-12.
+ */
+public class HelloClientDemo {
+ 
+    public static final String SERVER_IP = "localhost";
+    public static final int SERVER_PORT = 8090;
+    public static final int TIMEOUT = 30000;
+ 
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        HelloClientDemo client = new HelloClientDemo();
+        client.startClient("amosli");
+ 
+    }
+ 
+    /**
+     * @param userName
+     */
+    public void startClient(String userName) {
+        TTransport transport = null;
+        try {
+            transport = new TSocket(SERVER_IP, SERVER_PORT, TIMEOUT);
+            // 协议要和服务端一致
+//            TProtocol protocol = new TBinaryProtocol(transport);
+            TProtocol protocol = new TCompactProtocol(transport);
+            // TProtocol protocol = new TJSONProtocol(transport);
+            HelloWorldService.Client client = new HelloWorldService.Client(
+                    protocol);
+            transport.open();
+            String result = client.sayHello(userName);
+            System.out.println("Thrift client result =: " + result);
+        } catch (TTransportException e) {
+            e.printStackTrace();
+        } catch (TException e) {
+            e.printStackTrace();
+        } finally {
+            if (null != transport) {
+                transport.close();
+            }
+        }
+    }
+ 
+}
+
+
+
+安装手册
+1.下载thrift-0.9.2 .exe文件命名为thrift .exe放在c盘下的一个Thtift文件夹中。
+
+2.环境变量的设置：path=C:\Thrift 
+
+3.通过thrift -version查看版本

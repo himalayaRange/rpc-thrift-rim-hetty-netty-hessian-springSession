@@ -1,0 +1,114 @@
+<?xml   version="1.0" encoding="UTF-8"?>
+<beans  xmlns="http://www.springframework.org/schema/beans"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	    xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+        
+     	<description>Thrift-Rpc-Server</description>  
+     	
+     	<!-- 发布RPC服务 -->
+     	<bean id="servicePublisher" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.remote.base.ServicePublisher">
+     		<property name="definitions">
+     			<array>
+     				<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.remote.ServiceDefinition">
+     					<property name="serviceName" value="AddService"/>
+     					<property name="interfaceClass" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.AddService"/>
+     					<property name="implInstance">
+     						<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.impl.AddServiceImpl"></bean>
+     					</property>
+     				</bean>
+     				
+     				<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.remote.ServiceDefinition">
+     					<property name="serviceName" value="OtherAddService"/>
+     					<property name="interfaceClass" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.AddService"/>
+     					<property name="implInstance">
+     						<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.impl.OtherAddServiceImpl"></bean>
+     					</property>
+     					<!-- 接口版本号，默认1.0.0，可以不配置，客户端需要相同版本号才能访问 -->
+     					<property name="version" value="1.0.0"></property>
+     				</bean>
+     				
+     				<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.remote.ServiceDefinition">
+     					<property name="serviceName" value="MoodService"/>
+     					<property name="interfaceClass" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.MoodService"/>
+     					<property name="implInstance">
+     						<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.impl.MoodServiceImpl"></bean>
+     					</property>
+     					<!-- 接口版本号，默认1.0.0，可以不配置，客户端需要相同版本号才能访问 -->
+     					<property name="version" value="1.0.0"></property>
+     				</bean>
+     				
+     				<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.remote.ServiceDefinition">
+     					<property name="serviceName" value="OrderService"/>
+     					<property name="interfaceClass" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.OrderService"/>
+     					<property name="implInstance">
+     						<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.impl.OrderServiceImpl"></bean>
+     					</property>
+     					<!-- 接口版本号，默认1.0.0，可以不配置，客户端需要相同版本号才能访问 -->
+     					<property name="version" value="1.0.0"></property>
+     				</bean>
+     			</array>
+     		</property>
+     		<property name="messageConvert">
+     			<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.ThriftMessageConvert">
+     				<!--
+     				 说明：序列化工具效率大小（单线程万次序列化测试）：
+     				 	protobuf>FST>Hessian2>Kryo>fastjson>java>Hessian
+	     				 序列化工具目前已经实现如下，可按项目要求配置，不区分大小写-
+	     				 value="java"  ==========效率低，不推荐使用
+	     				 value="Kryo"   ========= 默认 稳定
+	     				 value="protobuf"========为完全实现，不推荐使用
+	     				 value="FST"     ========性能非常高，没有Kryo稳定
+	     				 value="fastjson"========性能稳定性较高，推荐使用
+	     				 value="Hessian" ========性能低不建议使用
+	     				 value="Hessian2"========性能高且稳定，推荐使用
+     				 -->
+     				<property name="serializerName" value="FST"/>
+     			</bean>
+     		</property>
+     	</bean> 
+     	
+     	<!-- 说明：
+     		目前Thrift的线程服务支持三种：
+     		ThriftThreadPoolServer:阻塞IO，客户端需要甚至成非分帧传输<property name="framed" value="false"></property>
+     	 	ThriftHsHaServer:单线程非阻塞式NION，客户端需要甚至成分帧传输<property name="framed" value="true"></property>
+     	 	ThriftTThreadedSelectorServer:多线程非阻塞NIO,客户端需要甚至成分帧传输<property name="framed" value="true"></property> minWorkerThreads设置无效
+     	 	建议使用ThriftTThreadedSelectorServer
+     	 -->
+     	
+     	<!-- 线程池服务配置（无秘钥，所有用户可访问） -->
+       <bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.server.ThriftTThreadedSelectorServer">
+     		<property name="processor" ref="servicePublisher"></property>
+     		<!-- 传输协议，默认为1，此项可不配置 1:TTupleProtocol 2：TBinaryProtocol 3：TCompactProtocol 4：TJSONProtocol，具体的协议依据项目要求核实选择-->
+     		<property name="protocol" value="1"></property>
+			<property name="port" value="9091"></property>
+			<property name="minWorkerThreads" value="1"></property>
+			<property name="workerThreads" value="50"></property>
+			<property name="security" value="false"></property>
+			<property name="stopTimeoutVal" value="3000"></property>
+     	</bean> 
+     	
+     	<!-- 线程池服务配置==RPC携带Token对指定用户访问 -->
+     	<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.server.ThriftTThreadedSelectorServer">
+     	<property name="processor" ref="servicePublisher"></property>
+     	<!-- 传输协议，默认为1，此项可不配置 1:TTupleProtocol 2：TBinaryProtocol 3：TCompactProtocol 4：TJSONProtocol，具体的协议依据项目要求核实选择-->
+     	<property name="protocol" value="1"></property>
+		<property name="port" value="9090"></property>
+		<property name="minWorkerThreads" value="10"></property>
+		<property name="workerThreads" value="50"></property>
+		<property name="security" value="true"></property>
+		<property name="stopTimeoutVal" value="3000"></property>
+		<property name="clientTimeout" value="10000"></property>
+     	<property name="allowedFromTokens">
+     		<map>
+     			<entry key="WANGYI" value="DSIksduiKIOYUIOkYIOhIOUIOhjklYUI"></entry>
+     		</map>
+     	</property>
+     	<property name="protocolFactory">
+     		<bean class="org.apache.thrift.protocol.TTupleProtocol.Factory"></bean>
+     	</property>
+     	</bean>
+		
+</beans>  

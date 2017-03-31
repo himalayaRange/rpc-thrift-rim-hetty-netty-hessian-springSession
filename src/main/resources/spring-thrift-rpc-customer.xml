@@ -1,0 +1,149 @@
+<?xml   version="1.0" encoding="UTF-8"?>
+<beans  xmlns="http://www.springframework.org/schema/beans"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+		xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+        
+        <description>Thrift-RPC-Client</description>
+	
+		<!-- 客户端的相关配置 -->
+		<bean id="factoryProvider" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.cluster.ThriftClientFactoryProvider">
+			<property name="hostPorts">
+				<list>
+					<!-- 9090携带token，9091对所有人开放 -->
+					<value>192.168.1.176:9090</value>
+					<value>192.168.1.176:9091</value>
+				</list>
+			</property>
+			<!--请求超时，根据业务设置-->
+			<property name="timeout" value="60000"></property>
+			<!-- 连接超时，超过这个时间无法创建连接的连接池被暂设为无效 -->
+			<property name="connectionTimeout" value="10000"></property>
+			<!-- 如果服务端是NIO,需要启动此项 ,ThriftThreadSelectorServer和ThriftHshaServer是NIO，需要设置true,ThriftThreadPoolServer可以设置false-->
+			<property name="framed" value="true"></property>
+			<!-- 传输协议，默认为1，需要和服务端协议一致，此项可不配置 1:TTupleProtocol 2：TBinaryProtocol 3：TCompactProtocol 4：TJSONProtocol，具体的协议依据项目要求核实选择-->
+			<property name="protocol" value="1"></property>
+			<!-- 安全选项 -->
+			<property name="from" value="WANGYI"></property>
+			<property name="token" value="DSIksduiKIOYUIOkYIOhIOUIOhjklYUI"></property>
+		</bean>
+		
+		<!-- 负载均衡说明：
+			连接池集群配置，目前随机和轮询的方式进行负载均衡，可以自己实现其他方式，建议使用轮询负载均衡 
+		-->
+		
+		<!-- 集群的配置 ,随机方式-->
+		<bean id="distributeClient" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.base.cluster.client.DistributeClient">
+			<property name="factoryProvider" ref="factoryProvider"></property>
+			<!-- 负载均衡实现类 -->
+			<property name="loadBalance">
+				<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.base.cluster.RandomLoadBalance"></bean>
+			</property>
+			<!--  心跳频率,保证连接的即使弹出和恢复，建议小些，不影响性能  -->
+			<property name="heartbeat" value="1000"></property>
+			<!-- 处理心跳的最大线程数 -->
+			<property name="maxHeartbeatThread" value="1"></property>
+			<!-- 连接池耗完直接重试，重试其他池子的次数，因此、maxWait的时间可能叠加 -->
+			<property name="retry" value="3"></property>
+			<!-- 由于被借走时间不一样，可能导致单个池子不够用，建议这个值大一些，可以通过maxIdle来限制长连接数量 -->
+			<property name="maxActive" value="300"></property>
+			<!-- 最大空闲，当池内连接大于maxIdle，每次returnObject都会销毁连接，maxIdle保证了长连接的数量 -->
+			<property name="maxIdle" value="200"></property>
+			<!-- 最小空闲 -->
+			<property name="minIdle" value="5"></property>
+			<!-- 等待连接池的时间 -->
+			<property name="maxWait" value="1000"></property>
+			<!-- 连接使用多久之后被销毁 -->
+			<property name="maxKeepMillis" value="-1"></property>
+			<!-- 连接使用多少次之后被销毁 -->
+			<property name="maxSendCount" value="-1"></property>
+			<!-- 心跳机制无法保证每次取出的连接均可用，默认false,如果有这种需求，可以启用testOnBorrow，但是会影响性能，增加请求的延迟 -->
+			<property name="testOnBorrow" value="false"></property>
+		</bean>
+		
+		<!-- 集群的配置 ,轮询方式-->
+		<bean id="centralClient" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.base.cluster.client.CentralClient">
+			<property name="factoryProvider" ref="factoryProvider"></property>
+			<!-- 负载均衡实现类 -->
+			<property name="loadBalance">
+				<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.base.cluster.RoundrobinLoadBalance"></bean>
+			</property>
+			<!-- 心跳频率,保证连接的即使弹出和恢复，建议小些，不影响性能 -->
+			<property name="heartbeat" value="1000"></property>
+			<!-- 连接池耗完直接重试，重试其他池子的次数，因此、maxWait的时间可能叠加 -->
+			<property name="retry" value="3"></property>
+			<!-- 由于被借走时间不一样，可能导致单个池子不够用，建议这个值大一些，可以通过maxIdle来限制长连接数量 -->
+			<property name="maxActive" value="300"></property>
+			<!-- 最大空闲，当池内连接大于maxIdle，每次returnObject都会销毁连接，maxIdle保证了长连接的数量 -->
+			<property name="maxIdle" value="200"></property>
+			<!-- 最小空闲 -->
+			<property name="minIdle" value="5"></property>
+			<!-- 等待连接池的时间 ，建议小些，甚至可以取消-->
+			<property name="maxWait" value="1000"></property>
+			<!-- 连接使用多久之后被销毁 -->
+			<property name="maxKeepMillis" value="-1"></property>
+			<!-- 连接使用多少次之后被销毁 -->
+			<property name="maxSendCount" value="-1"></property>
+			<!-- 心跳机制无法保证每次取出的连接均可用，默认false,如果有这种需求，可以启用testOnBorrow，但是会影响性能，增加请求的延迟 -->
+			<property name="testOnBorrow" value="false"></property>
+		</bean>
+		
+		<bean id="messageConvert" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.ThriftMessageConvert">
+			<!--
+     				 说明：序列化工具效率大小（单线程万次序列化测试）：
+     				 	protobuf>FST>Hessian2>Kryo>fastjson>java>Hessian
+	     				 序列化工具目前已经实现如下，可按项目要求配置，不区分大小写-
+	     				 value="java"  ==========效率低，不推荐使用
+	     				 value="Kryo"   ========= 默认 稳定
+	     				 value="protobuf"========为完全实现，不推荐使用
+	     				 value="FST"     ========性能非常高，没有Kryo稳定
+	     				 value="fastjson"========性能稳定性较高，推荐使用
+	     				 value="Hessian" ========性能低不建议使用
+	     				 value="Hessian2"========性能高且稳定，推荐使用
+     				 -->
+			<property name="serializerName" value="FST" />
+		</bean>
+		
+		<!-- 
+			说明：也可以单独配置某个服务的序列化方式
+			<property name="messageConvert">
+					<bean class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.ThriftMessageConvert">
+						<property name="serializerName" value="java" />
+					</bean>
+			</property>
+			version默认版本号1.0.0，需要和服务端版本号一致的接口才能访问
+		 -->
+		<bean id="addService" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.base.ThriftRemoteProxyFactory">
+			<property name="serviceName" value="AddService"></property>
+			<property name="proxyInterface" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.AddService"></property>
+			<property name="client" ref="centralClient"></property>
+			<property name="version" value="1.0.0"></property>
+			<property name="messageConvert" ref="messageConvert"/>
+		</bean>
+		
+		<bean id="otherAddService" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.base.ThriftRemoteProxyFactory">
+			<property name="serviceName" value="OtherAddService"></property>
+			<property name="proxyInterface" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.AddService"></property>
+			<property name="client" ref="centralClient"></property>
+			<property name="version" value="1.0.0"></property>
+			<property name="messageConvert" ref="messageConvert"/>
+		</bean>
+		
+		<bean id="moodService" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.base.ThriftRemoteProxyFactory">
+			<property name="serviceName" value="MoodService"></property>
+			<property name="proxyInterface" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.MoodService"></property>
+			<property name="client" ref="centralClient"></property>
+			<property name="version" value="1.0.0"></property>
+			<property name="messageConvert" ref="messageConvert"/>
+		</bean>
+		
+		<bean id="orderService" class="com.github.wangyi.thrift.simpleRpc.appchina_rpc.thrift.remote.base.ThriftRemoteProxyFactory">
+			<property name="serviceName" value="OrderService"></property>
+			<property name="proxyInterface" value="com.github.wangyi.thrift.simpleRpc.appchina_rpc_test.main.api.OrderService"></property>
+			<property name="client" ref="centralClient"></property>
+			<property name="version" value="1.0.0"></property>
+			<property name="messageConvert" ref="messageConvert"/>
+		</bean>
+</beans>        

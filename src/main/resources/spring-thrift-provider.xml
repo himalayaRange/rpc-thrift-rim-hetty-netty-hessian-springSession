@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+				http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+				http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+				http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd"
+	default-lazy-init="false">
+	
+	<!-- 系统代理容器,可以不配置，默认使用spring的IOC发布服务 -->
+	<bean id="thriftProxy" class="com.github.wangyi.thrift.rpc.constant.ThriftProxy">
+		<!-- 默认1：springIOC 2:Guice IOC -->
+		<property name="iocProxy" value="1"/>
+		<!-- 传输格式协议，全局配置 -->
+		<!-- <property name="protocol" value="2"/> -->
+	</bean>
+	
+	<!-- monitor -->
+	<bean id="simpleMonitorService" class="com.github.wangyi.thrift.rpc.monitor.statistic.support.SimpleMonitorService"/>
+	
+	<!-- zookeeper Factory -->
+	<bean id="zookeeper" class="com.github.wangyi.thrift.rpc.zookeeper.support.ZookepperFactory">
+		<!-- zookper地址的集合 -->
+		<property name="zkHosts" value="${zk_zkHosts}" />
+		<property name="namespace" value="${zk_namespace}" />
+		<property name="connectionTimeout" value="${zk_connectionTimeout}" />
+		<property name="sessionTimeout" value="${zk_sessionTimeout}" />
+		<property name="maxRetryPoliy" value="${zk_maxRetryPoliy}"/>
+		<property name="singleton" value="true" />
+	</bean>
+	
+	<!-- zookeeper register
+		CreateMode.PERSISTENT: 创建节点后，不删除就永久存在,value=1
+		CreateMode.PERSISTENT_SEQUENTIAL：节点path末尾会追加一个10位数的单调递增的序列 value=2
+		CreateMode.EPHEMERAL：创建后，回话结束节点会自动删除 value=3,（默认为3）
+		CreateMode.EPHEMERAL_SEQUENTIAL：节点path末尾会追加一个10位数的单调递增的序列 value=4
+	 -->
+	<bean id="addressRegister" class="com.github.wangyi.thrift.rpc.zookeeper.support.ZookepperAddressRegister" destroy-method="close">
+		<property name="zkClient" ref="zookeeper" />
+		<property name="nodeModel" value="3"/>
+	</bean>
+	
+	<!-- serviceImpl -->
+	<bean id="helloSerivceImpl" class="com.github.wangyi.thrift.rpc.service.support.HelloWorldServiceImpl"/>
+	<bean id="helloSerivce" class="com.github.wangyi.thrift.rpc.thrift.ThriftServiceServerFactory" destroy-method="close">
+		<!-- 传输格式，此处配置全局失效 -->
+		<property name="protocol" value="1"/>
+		<property name="service" ref="helloSerivceImpl" />
+		<property name="name" value="HelloService"/>
+		<property name="addressRegister" ref="addressRegister" />
+		<!--默认 -8299端口-->
+		<property name="port" value="8299" />
+		<!-- 默认1.0.0 -->
+		<property name="version" value="1.0.0" />
+		<!-- 默认权重位为1 -->
+		<property name="weight" value="1" />
+		<!-- 是否使用优雅退出 默认false 如果使用程序请使用kill,不要使用kill -9 -->
+		<property name="zooniftyShutdownHook" value="false"/>
+		<!-- 框架自带simpleMonitorService -->
+		<property name="monitorService" ref="simpleMonitorService" />
+		<!-- true:监控开启 false:监控关闭 默认false -->
+		<property name="isMonitor" value="true"/>
+		<!-- 是否开启netty的hashedTimer定时器，处理定时任务效率高，占内存高，默认false -->
+		<property name="isHashedWheelTimer" value="true"/>
+	</bean>
+	
+</beans>
