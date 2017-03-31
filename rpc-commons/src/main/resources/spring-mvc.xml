@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd">
+	<description>spring-mvc配置</description>
+
+
+	<!-- 自动扫描且只扫描@Controller控制器 -->
+	<context:component-scan base-package="com.github.wangyi" use-default-filters="false">
+		<!-- 只扫描控制器@Controller -->
+		<context:include-filter type="annotation"  expression="org.springframework.stereotype.Controller" />
+		<!-- 只扫描@ControllerAdvice全局注解 -->
+		<context:include-filter type="annotation"  expression="org.springframework.web.bind.annotation.ControllerAdvice" />
+	</context:component-scan>
+
+	<!--1:开始SpringMVC注解模式 -->
+	<!--简化配置： -->
+	<!--1）自动注册DefaultAnnotationHandlerMapping,AnnotationMethodHandlerAdapter -->
+	<!--2）提供一些列：数据绑定，数字和日期的format @NumberFormat @DataTimeFormart，xml,json 默认读写支持。 -->
+	<mvc:annotation-driven
+		content-negotiation-manager="contentNegotiationManager">
+		<mvc:message-converters register-defaults="true">
+			<!-- 将StringHttpMessageConverter的默认编码设为UTF-8 -->
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter">
+				<constructor-arg value="UTF-8" />
+			</bean>
+			<!-- 将Jackson2HttpMessageConverter的默认格式化输出设为true -->
+			<bean
+				class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+				<property name="prettyPrint" value="true" />
+			</bean>
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+
+	<!-- REST中根据URL后缀自动判定Content-Type及相应的View -->
+	<bean id="contentNegotiationManager"
+		class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+		<property name="mediaTypes">
+			<value>
+				json=application/json
+				xml=application/xml
+			</value>
+		</property>
+	</bean>
+
+	<!-- 多视图配置,jsp,velocity,html，暂时没有提供对freemark的支持 -->
+	<bean id="viewResolver" class="com.github.wangyi.commons.mvc.MultiViewResolver">
+		<property name="defaultViewResolver" ref="beanNameViewResolver" />
+		<property name="viewResolverMap">
+			<map>
+				<entry>
+					<key>
+						<set>
+							<value>.jsp</value>
+						</set>
+					</key>
+					<ref bean="jspViewResolver" />
+				</entry>
+				<entry>
+					<key>
+						<set>
+							<value>.html</value>
+						</set>
+					</key>
+					<ref bean="htmlViewResolver" />
+				</entry>
+			</map>
+		</property>
+	</bean>
+
+	<bean id="beanNameViewResolver"
+		class="org.springframework.web.servlet.view.BeanNameViewResolver" />
+
+	<!-- 定义跳转的文件的前后缀 ，视图模式配置 -->
+	<bean id="jspViewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass"
+			value="org.springframework.web.servlet.view.JstlView" />
+		<property name="prefix" value="/WEB-INF/views/jsp/" />
+		<property name="suffix" value=".jsp"></property>
+	</bean>
+
+
+	<bean id="htmlViewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="viewClass"
+			value="org.springframework.web.servlet.view.JstlView" />
+		<property name="prefix" value="/" />
+	</bean>
+
+	<!-- springmvc拦截器 -->
+	<mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**" />
+			<mvc:exclude-mapping path="/static/**" />
+			<bean class="com.github.wangyi.springSession.SpringMvcFilter"></bean>
+		</mvc:interceptor>
+	</mvc:interceptors>
+
+	<!--静态资源默认servlet配置 -->
+	<!-- 1).加入对静态资源处理：js,gif,png 2).允许使用 "/" 做整体映射 -->
+	<mvc:default-servlet-handler />
+
+	<!-- 将Controller抛出的异常转到特定View, 保持SiteMesh的装饰效果 -->
+	<bean
+		class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+		<property name="exceptionMappings">
+			<props>
+				<prop key="org.apache.shiro.authz.UnauthorizedException">error/error</prop>
+				<prop key="java.lang.Throwable">error/error</prop>
+				<prop key="java.lang.Exception">error/error</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- 配置文件上传，如果没有使用文件上传可以不用配置，当然如果不配，那么配置文件中也不必引入上传组件包 -->
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<!-- 默认编码 -->
+		<property name="defaultEncoding" value="utf-8" />
+		<!-- 文件大小最大值 -->
+		<property name="maxUploadSize" value="10485760000" />  <!-- byte 上传文件大小 -->
+		<!-- 内存中的最大值 -->
+		<property name="maxInMemorySize" value="40960" />   <!-- byte 设置在文件上传时允许写到内存中的最大值 ,超过此值写入硬盘 -->
+	</bean>
+</beans>
